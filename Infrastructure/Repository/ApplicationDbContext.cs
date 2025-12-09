@@ -6,8 +6,8 @@ namespace Infrastructure.Repository;
 
 public class ApplicationDbContext : DbContext
 {
-    private string _connectionString = "server=localhost;database=cloudgames;user=root;password=rooot123";
-    //private string _connectionString;
+    //private string _connectionString = "Server=localhost,1433;Database=Db.Catalog;User Id=sa;Password=rooot1234!#;TrustServerCertificate=True;";
+    private string _connectionString;
 
     public ApplicationDbContext()
     {
