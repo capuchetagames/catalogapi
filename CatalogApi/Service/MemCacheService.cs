@@ -1,7 +1,7 @@
 using Core.Models;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace CloudGamesApi.Service;
+namespace CatalogApi.Service;
 
 public class MemCacheService(IMemoryCache cache) : ICacheService
 {
