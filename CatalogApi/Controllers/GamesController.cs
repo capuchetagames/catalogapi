@@ -6,7 +6,7 @@ using Core.Repository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CloudGamesApi.Controllers;
+namespace CatalogApi.Controllers;
 
 /// <summary>
 /// Gerencia as operações CRUD para os jogos da plataforma.
