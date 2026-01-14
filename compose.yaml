@@ -1,0 +1,61 @@
+﻿services:
+  #Banco de Dados Sql Server
+  catalog-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: catalog_db_sql_server
+    platform: linux/amd64
+    user: root
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: rooot1234!!
+      MSSQL_PID: Developer
+      #- MSSQL_USER=sa
+    ports:
+      - "1436:1433" 
+    volumes:
+      - catalog_sql_data:/var/opt/mssql/data
+    networks:
+      - microsservicos-net
+    healthcheck:
+      test: >
+        /opt/mssql-tools18/bin/sqlcmd
+        -S localhost
+        -U sa
+        -P "rooot1234!!"
+        -C
+        -Q "SELECT 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  catalog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: catalog_api_container
+    restart: on-failure
+    ports:
+      - "5245:8080" 
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: >
+        Server=catalog-db;
+        Database=Db.Catalog;
+        User Id=sa;
+        Password=rooot1234!!;
+        TrustServerCertificate=True;
+      Jwt__Key: IkV6/I+/6WtC4xTRDjLMdwWl0jkt6UAU2R0NUwsL7fI=
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    networks:
+      - microsservicos-net
+
+volumes:
+  catalog_sql_data:
+
+networks:
+  microsservicos-net:
+    #external: true
+    name: app-network
+    driver: bridge
