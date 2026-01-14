@@ -15,7 +15,7 @@ public class ApplicationDbContext : DbContext
             .AddJsonFile("appsettings.json")
             .Build();
         
-        _connectionString = configuration.GetConnectionString("ConnectionString");
+        _connectionString = configuration.GetConnectionString("DefaultConnection");
     }
     
     public ApplicationDbContext(string connectionString)
