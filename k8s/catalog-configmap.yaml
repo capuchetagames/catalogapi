@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-config
+data:
+  DB_HOST: "catalog-db"
+  DB_NAME: "Db.Catalog"
+  ASPNETCORE_ENVIRONMENT: "Development"
+  ACCEPT_EULA: "Y"
+  MSSQL_PID: "Developer"

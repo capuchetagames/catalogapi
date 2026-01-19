@@ -10,6 +10,29 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{9BAE5198-EC69-42F5-A5FA-2E9DBC3AA0CE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "k8s", "k8s", "{E81CD4AD-0358-48E2-A3C9-C58AA77515C9}"
+	ProjectSection(SolutionItems) = preProject
+		k8s\catalog-deployment.yaml = k8s\catalog-deployment.yaml
+		k8s\catalog-pod.yaml = k8s\catalog-pod.yaml
+		k8s\catalog-secret.yaml = k8s\catalog-secret.yaml
+		k8s\catalog-service.yaml = k8s\catalog-service.yaml
+		k8s\env.sh = k8s\env.sh
+		k8s\k8s-delete-all.sh = k8s\k8s-delete-all.sh
+		k8s\k8s-deploy-api.sh = k8s\k8s-deploy-api.sh
+		k8s\k8s-deploy-db.sh = k8s\k8s-deploy-db.sh
+		k8s\k8s-dev-api.sh = k8s\k8s-dev-api.sh
+		k8s\k8s-start-all-deploy.sh = k8s\k8s-start-all-deploy.sh
+		k8s\k8s-start-all-dev.sh = k8s\k8s-start-all-dev.sh
+		k8s\sql-deployment.yaml = k8s\sql-deployment.yaml
+		k8s\sql-service.yaml = k8s\sql-service.yaml
+		k8s\catalog-configmap.yaml = k8s\catalog-configmap.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{480B1EAD-F864-435E-B5DD-6113F2D73F9C}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yaml = docker-compose.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
