@@ -56,6 +56,5 @@ volumes:
 
 networks:
   microsservicos-net:
-    #external: true
     name: app-network
     driver: bridge

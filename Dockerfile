@@ -12,12 +12,12 @@ COPY ["Core/Core.csproj", "Core/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 RUN dotnet restore "CatalogApi/CatalogApi.csproj"
 COPY . .
-WORKDIR "/src/CatalogApi"
+WORKDIR "CatalogApi"
 RUN dotnet build "./CatalogApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./CatalogApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./CatalogApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish #/p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
