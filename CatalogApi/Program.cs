@@ -1,4 +1,7 @@
+using CatalogApi.Middlewares;
 using CatalogApi.Service;
+using Core.Models;
+using Core.Repository;
 using Infrastructure.Repository;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,8 +23,26 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString);
 }, ServiceLifetime.Scoped);
 
-builder.Services.AddHealthChecks();
+// Configuração do cache
+builder.Services.AddMemoryCache();
+builder.Services.AddTransient<ICacheService, MemCacheService>();
 
+// Registrar repositórios
+builder.Services.AddScoped<IGameRepository, GameRepository>();
+
+// Configuração do HttpClient para comunicação com UserAPI
+builder.Services.AddHttpClient("UsersApi", client =>
+{
+    var usersApiUrl = builder.Configuration["Services:UsersApi:BaseUrl"] ?? "http://users-api:8080/";
+    client.BaseAddress = new Uri(usersApiUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Registrar serviços de validação de token
+builder.Services.AddScoped<ITokenValidationService, TokenValidationService>();
+
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -37,6 +58,9 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health");
 
 app.UseHttpsRedirection();
+
+// Adicionar middleware de validação JWT customizado
+app.UseMiddleware<JwtValidationMiddleware>();
 
 app.UseAuthorization();
 
