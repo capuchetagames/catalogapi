@@ -33,6 +33,7 @@ public class PlayerLibraryController : ControllerBase
         _logger.LogInformation($"Usuário {username} acessando sua biblioteca de jogos.");
 
         // Simulação de biblioteca de jogos do usuário
+        //ToDo replace it with the database data
         var userLibrary = new[]
         {
             new { Id = 1, Name = "Cyberpunk 2077", PurchaseDate = DateTime.UtcNow.AddDays(-30) },
