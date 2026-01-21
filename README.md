@@ -201,10 +201,14 @@ cd catalogapi
 docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=rooot1234!!" -p 1436:1433 --name catalog_db -d mcr.microsoft.com/mssql/server:2022-latest
 ```
 
+> ⚠️ **SEGURANÇA**: A senha acima é apenas para desenvolvimento local. Em produção, use senhas fortes e únicas!
+
 3. Configure o RabbitMQ (local ou via Docker):
 ```bash
 docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin rabbitmq:3-management
 ```
+
+> ⚠️ **SEGURANÇA**: As credenciais acima são apenas para desenvolvimento local. Em produção, use credenciais fortes e únicas!
 
 4. Restaure as dependências:
 ```bash
@@ -254,6 +258,12 @@ Jwt__Key=your-secret-jwt-key-here
 }
 ```
 
+> ⚠️ **NOTA DE SEGURANÇA**: As credenciais acima são valores de exemplo para desenvolvimento local. Em ambientes de produção:
+> - Use senhas fortes e únicas para o banco de dados
+> - Gere credenciais seguras para o RabbitMQ
+> - Utilize secrets management (Azure Key Vault, AWS Secrets Manager, Kubernetes Secrets, etc.)
+> - Nunca commite credenciais reais no controle de versão
+
 ### Variáveis Importantes
 
 | Variável | Descrição | Valor Padrão |
@@ -284,7 +294,10 @@ docker run -d -p 5245:8080 --name catalog-api \
   catalogapi:latest
 ```
 
-> ⚠️ **SEGURANÇA**: Substitua `your-secret-jwt-key-here` por uma chave JWT segura gerada especificamente para seu ambiente.
+> ⚠️ **SEGURANÇA**: 
+> - Substitua `your-secret-jwt-key-here` por uma chave JWT segura
+> - A senha do banco (`rooot1234!!`) é apenas para desenvolvimento local
+> - Em produção, use credenciais fortes e gerenciadas por secrets management
 
 ### Kubernetes
 
