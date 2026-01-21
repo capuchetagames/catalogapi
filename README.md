@@ -230,8 +230,10 @@ dotnet run
 ```env
 ASPNETCORE_ENVIRONMENT=Development
 ASPNETCORE_HTTP_PORTS=5245
-Jwt__Key=IkV6/I+/6WtC4xTRDjLMdwWl0jkt6UAU2R0NUwsL7fI=
+Jwt__Key=your-secret-jwt-key-here
 ```
+
+> ⚠️ **IMPORTANTE**: Gere sua própria chave JWT segura. Nunca use chaves de exemplo em produção!
 
 ### Configuração no `appsettings.json`
 ```json
@@ -262,7 +264,7 @@ Jwt__Key=IkV6/I+/6WtC4xTRDjLMdwWl0jkt6UAU2R0NUwsL7fI=
 | `RabbitMq__Host` | Host do RabbitMQ | `localhost` |
 | `RabbitMq__User` | Usuário do RabbitMQ | `admin` |
 | `RabbitMq__Password` | Senha do RabbitMQ | `admin` |
-| `Jwt__Key` | Chave secreta JWT | Ver .env |
+| `Jwt__Key` | Chave secreta JWT | Gere uma chave segura única |
 | `Services__UsersApi__BaseUrl` | URL base da UserAPI | `http://users-api:8080/` |
 
 ## 🐳 Deployment
@@ -278,9 +280,11 @@ docker build -t catalogapi:latest .
 ```bash
 docker run -d -p 5245:8080 --name catalog-api \
   -e ConnectionStrings__DefaultConnection="Server=host.docker.internal,1436;Database=Db.Catalog;User Id=sa;Password=rooot1234!!;TrustServerCertificate=True;" \
-  -e Jwt__Key="IkV6/I+/6WtC4xTRDjLMdwWl0jkt6UAU2R0NUwsL7fI=" \
+  -e Jwt__Key="your-secret-jwt-key-here" \
   catalogapi:latest
 ```
+
+> ⚠️ **SEGURANÇA**: Substitua `your-secret-jwt-key-here` por uma chave JWT segura gerada especificamente para seu ambiente.
 
 ### Kubernetes
 
