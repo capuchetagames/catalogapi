@@ -28,6 +28,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Core.Entity.Game", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("INT");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
@@ -57,6 +58,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Core.Entity.PlayerLibraryGames", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("INT");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));

@@ -10,7 +10,7 @@ public class PlayerLibraryGamesConfiguration : IEntityTypeConfiguration<PlayerLi
     {
         builder.ToTable("PlayerLibraryGames");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnType("INT").ValueGeneratedNever().UseIdentityColumn();
+        builder.Property(x => x.Id).HasColumnType("INT").UseIdentityColumn();
         builder.Property(x => x.GameId).HasColumnType("INT").IsRequired();
         builder.Property(x => x.UserId).HasColumnType("INT").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnType("DATETIME").IsRequired();
