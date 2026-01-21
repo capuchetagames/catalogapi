@@ -17,14 +17,16 @@ namespace CatalogApi.Controllers;
 public class GamesController : ControllerBase
 {
     private readonly IGameRepository _gameRepository;
+    private readonly IRabbitMqService _rabbitMqService;
     private readonly ICacheService _cacheService;
     private readonly ILogger<GamesController> _logger;
 
-    public GamesController(IGameRepository gameRepository, ICacheService cacheService, ILogger<GamesController> logger)
+    public GamesController(IGameRepository gameRepository, ICacheService cacheService, ILogger<GamesController> logger, IRabbitMqService rabbitMqService)
     {
         _gameRepository = gameRepository;
         _cacheService = cacheService;
         _logger = logger;
+        _rabbitMqService = rabbitMqService;
     }
 
     /// <summary>
@@ -292,6 +294,58 @@ public class GamesController : ControllerBase
             { 
                 message = "Ocorreu um erro interno.", 
                 error = e.Message 
+            });
+        }
+    }
+    
+    /// <summary>
+    /// Cria uma ordem de compra 
+    /// </summary>
+    /// <param name="orderInput">Os dados de compra.</param>
+    /// <returns>O jogo recém-criado.</returns>
+    [HttpPost("/order-game")]
+    [Consumes("application/json")]
+    [ProducesResponseType(typeof(OrderInput), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> OrderGame([FromBody] OrderInput orderInput)
+    {
+        try
+        {
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            //Console.WriteLine($"userRole: {userRole} | username:  {username} | userId: {userId}");
+            
+            Console.WriteLine($"Cria Ordem de compra Usesr: {orderInput.GameId} | Game:  {orderInput.UserId} ");
+            
+            var game = _gameRepository.GetById(orderInput.GameId);
+            
+            if (game == null)
+            {
+                return NotFound(new { message = $"Jogo com ID {orderInput.GameId} não encontrado." });
+            }
+
+            await _rabbitMqService.PublishAsync(
+                "order.events",
+                "order.ordered",
+                new OrderPlacedEvent(1, "teste", "TesTT", orderInput.GameId, game.Price),CancellationToken.None
+            );
+            
+            
+            //_logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) Criado Ordem de compra por: {username}");
+            return CreatedAtAction(nameof(Get), new { id = game.Id }, orderInput);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Erro ao criar jogo: {e.Message}");
+            return StatusCode(StatusCodes.Status500InternalServerError, new 
+            { 
+                message = "Erro interno do servidor.",
+                error = e.Message
             });
         }
     }

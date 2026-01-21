@@ -1,9 +1,11 @@
+using CatalogApi.Config;
 using CatalogApi.Middlewares;
 using CatalogApi.Service;
 using Core.Models;
 using Core.Repository;
 using Infrastructure.Repository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,7 @@ builder.Services.AddTransient<ICacheService, MemCacheService>();
 
 // Registrar repositórios
 builder.Services.AddScoped<IGameRepository, GameRepository>();
+builder.Services.AddScoped<IPlayerLibraryGames,PlayerLibraryGamesRepository>();
 
 // Configuração do HttpClient para comunicação com UserAPI
 builder.Services.AddHttpClient("UsersApi", client =>
@@ -43,6 +46,18 @@ builder.Services.AddHttpClient("UsersApi", client =>
 builder.Services.AddScoped<ITokenValidationService, TokenValidationService>();
 
 builder.Services.AddHealthChecks();
+
+builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
+
+builder.Services.AddSingleton<IRabbitMqService>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<RabbitMqSettings>>().Value;
+    return new RabbitMqService(settings);
+});
+
+builder.Services.AddHostedService<PaymentProcessConsumer>();
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -60,7 +75,7 @@ app.MapHealthChecks("/health");
 app.UseHttpsRedirection();
 
 // Adicionar middleware de validação JWT customizado
-app.UseMiddleware<JwtValidationMiddleware>();
+//app.UseMiddleware<JwtValidationMiddleware>();
 
 app.UseAuthorization();
 

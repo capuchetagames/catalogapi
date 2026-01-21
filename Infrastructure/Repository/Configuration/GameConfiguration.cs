@@ -10,7 +10,7 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
     {
         builder.ToTable("Games");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnType("INT").ValueGeneratedNever().UseIdentityColumn();
+        builder.Property(x => x.Id).HasColumnType("INT").UseIdentityColumn();
         builder.Property(x => x.Name).HasColumnType("VARCHAR(100)").IsRequired();
         builder.Property(x => x.Category).HasColumnType("VARCHAR(100)").IsRequired();
         builder.Property(x => x.Active).HasColumnType("BIT").IsRequired();
