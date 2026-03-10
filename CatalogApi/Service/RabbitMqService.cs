@@ -10,7 +10,6 @@ namespace CatalogApi.Service;
 
 public class RabbitMqService : IRabbitMqService
 {
-    private readonly RabbitMqSettings _settings;
     private readonly IConnection _connection;
     private readonly IChannel _publishChannel;
 
@@ -18,18 +17,15 @@ public class RabbitMqService : IRabbitMqService
 
     public RabbitMqService(RabbitMqSettings settings)
     {
-        _settings = settings;
-
         var factory = new ConnectionFactory
         {
-            HostName = settings.Host,
+            HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? settings.Host,
             UserName = settings.User,
             Password = settings.Password,
             AutomaticRecoveryEnabled = true
         };
 
         _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
-
         _publishChannel = _connection.CreateChannelAsync().GetAwaiter().GetResult();
     }
 
