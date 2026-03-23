@@ -4,8 +4,22 @@ using Core.Models;
 using Core.Repository;
 using Infrastructure.Repository;
 using Microsoft.Extensions.Options;
+using NewRelic.LogEnrichers.Serilog;
+using Serilog;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithNewRelicLogsInContext() // método do pacote
+    .WriteTo.File(
+        path: "logs/app.log.json",
+        formatter: new NewRelicFormatter(),
+        rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 
 builder.Services.AddControllers();
