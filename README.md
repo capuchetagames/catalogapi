@@ -15,6 +15,8 @@ A Catalog API é um microsserviço que gerencia o catálogo de jogos da platafor
 - **Cache em Memória**: Otimização de performance com MemoryCache
 - **Mensageria Assíncrona**: Integração com RabbitMQ para fluxo de compras
 - **Health Checks**: Endpoints de monitoramento de saúde da aplicação
+- **Observabilidade com New Relic**: APM, rastreamento distribuído e monitoramento de performance
+- **Logging Estruturado**: Serilog com enriquecimento NewRelic e saída em arquivo JSON rotativo
 
 ## ⚡ Funcionalidades
 
@@ -27,8 +29,8 @@ A Catalog API é um microsserviço que gerencia o catálogo de jogos da platafor
 - ✅ Iniciar ordem de compra
 
 ### Biblioteca do Jogador
-- ✅ Visualizar biblioteca pessoal de jogos
-- ✅ Histórico de compras
+- ✅ Adição automática de jogos à biblioteca após pagamento aprovado (via PaymentProcessConsumer — grava no banco de dados)
+- ⚠️ Visualizar biblioteca pessoal de jogos (endpoint GET retorna dados simulados — leitura do banco em desenvolvimento)
 
 ## 🛠 Tecnologias
 
@@ -46,6 +48,10 @@ A Catalog API é um microsserviço que gerencia o catálogo de jogos da platafor
 
 ### Bibliotecas e Ferramentas
 - **Swagger/OpenAPI** - Documentação da API
+- **ReDoc** - Interface alternativa de documentação da API
+- **Serilog** - Logging estruturado com sink de arquivo JSON rotativo
+- **New Relic** - APM, monitoramento e enriquecimento de logs
+- **FluentValidation** - Validação de dados de entrada
 - **MemoryCache** - Sistema de cache
 - **Health Checks** - Monitoramento
 
@@ -63,8 +69,8 @@ CatalogApi/
 ### Comunicação com Outros Serviços
 
 - **UserAPI**: Validação de tokens JWT e autenticação distribuída
-- **RabbitMQ**: Publicação de eventos de pedidos de compra
-- **PaymentAPI** (consumidor): Processamento de pagamentos
+- **RabbitMQ**: Publicação de eventos de pedidos de compra e consumo de eventos de pagamento
+- **PaymentAPI** (consumidor): Processamento de pagamentos e envio de evento de confirmação
 
 ## 📡 Endpoints da API
 
@@ -117,7 +123,7 @@ Remove um jogo do catálogo.
 - **Resposta**: `204 No Content`
 
 #### `POST /order-game`
-Cria uma ordem de compra para um jogo.
+Cria uma ordem de compra para um jogo. Publica o evento `order.ordered` no exchange `order.events` do RabbitMQ.
 - **Autenticação**: Requerida
 - **Body**:
 ```json
@@ -138,6 +144,7 @@ Verifica o status do serviço de catálogo.
 Retorna a biblioteca de jogos do usuário autenticado.
 - **Autenticação**: Requerida
 - **Resposta**: `200 OK` - Lista de jogos do usuário
+- ⚠️ **Nota**: O endpoint de escrita (via `PaymentProcessConsumer`) já persiste os jogos no banco de dados. A leitura via este endpoint ainda retorna dados simulados — a consulta ao banco está em desenvolvimento.
 
 #### `GET /api/PlayerLibrary/health`
 Verifica o status do serviço de biblioteca.
@@ -148,6 +155,21 @@ Verifica o status do serviço de biblioteca.
 #### `GET /health`
 Endpoint de health check geral da aplicação.
 - **Resposta**: `200 OK`
+
+## ⚙️ Serviços em Background
+
+### PaymentProcessConsumer
+
+Serviço em background responsável por consumir eventos de pagamento processado publicados pela **PaymentAPI** no RabbitMQ e adicionar automaticamente o jogo comprado à biblioteca do jogador no banco de dados.
+
+- **Exchange**: `payments.events`
+- **Queue**: `payments.process`
+- **Routing Key**: `payment.*`
+- **Ação**: Cria um registro em `PlayerLibraryGames` associando o `UserId` ao `GameId` do jogo comprado
+
+```
+PaymentAPI ──► RabbitMQ (payments.events) ──► PaymentProcessConsumer ──► PlayerLibraryGames (DB)
+```
 
 ## 📦 Pré-requisitos
 
@@ -268,6 +290,8 @@ Jwt__Key=your-secret-jwt-key-here
 
 ### Docker
 
+> 📝 **Nota**: O `Dockerfile` utiliza build multi-stage e instala automaticamente o agente **New Relic .NET** para APM e rastreamento distribuído.
+
 #### Build da Imagem
 ```bash
 docker build -t catalogapi:latest .
@@ -290,10 +314,16 @@ docker run -d -p 5245:8080 --name catalog-api \
 
 O projeto inclui manifestos Kubernetes na pasta `/k8s`:
 
-#### Deploy Completo
+#### Deploy Completo (Produção)
 ```bash
 cd k8s
 ./k8s-start-all-deploy.sh
+```
+
+#### Deploy para Desenvolvimento
+```bash
+cd k8s
+./k8s-start-all-dev.sh
 ```
 
 #### Deploy Individual
@@ -303,14 +333,20 @@ cd k8s
 ./k8s-deploy-db.sh
 ```
 
-2. **API**:
+2. **API (produção)**:
 ```bash
 ./k8s-deploy-api.sh
 ```
 
+3. **API (desenvolvimento — pod)**:
+```bash
+./k8s-dev-api.sh
+```
+
 #### Recursos Kubernetes Disponíveis
 
-- `catalog-deployment.yaml` - Deployment da API
+- `catalog-deployment.yaml` - Deployment da API (produção)
+- `catalog-pod.yaml` - Pod da API (desenvolvimento)
 - `catalog-service.yaml` - Service da API
 - `catalog-configmap.yaml` - ConfigMap com configurações
 - `catalog-secret.yaml` - Secrets (JWT, senhas)
@@ -331,28 +367,72 @@ catalogapi/
 │   │   ├── GamesController.cs
 │   │   └── PlayerLibraryController.cs
 │   ├── Middlewares/               # Middlewares customizados
+│   │   ├── JwtValidationMiddleware.cs
+│   │   └── LogMiddleware.cs
 │   ├── Service/                   # Serviços da aplicação
+│   │   ├── MemCacheService.cs
+│   │   ├── MigrationExtensions.cs
+│   │   ├── PaymentProcessConsumer.cs
+│   │   ├── RabbitMqService.cs
+│   │   └── TokenValidationService.cs
 │   ├── Config/                    # Configurações
+│   │   └── RabbitMqSettings.cs
 │   ├── Program.cs                 # Entry point
 │   └── appsettings.json           # Configurações da aplicação
 ├── Core/                          # Camada de Domínio
 │   ├── Entity/                    # Entidades de domínio
+│   │   ├── EntityBase.cs
 │   │   ├── Game.cs
 │   │   └── PlayerLibraryGames.cs
 │   ├── Dtos/                      # Data Transfer Objects
-│   ├── Models/                    # Modelos
-│   └── Repository/                # Interfaces de repositórios
+│   │   ├── GameDto.cs
+│   │   ├── GameInput.cs
+│   │   ├── UpdateGameInput.cs
+│   │   ├── OrderInput.cs
+│   │   ├── OrderPlacedEvent.cs
+│   │   ├── PaymentProcessedEvent.cs
+│   │   ├── TokenValidationRequestDto.cs
+│   │   └── TokenValidationResponseDto.cs
+│   ├── Models/                    # Interfaces de serviços
+│   │   ├── IBaseLogger.cs
+│   │   ├── ICacheService.cs
+│   │   ├── ICorrelationIdService.cs
+│   │   ├── IRabbitMqService.cs
+│   │   └── ITokenValidationService.cs
+│   ├── Repository/                # Interfaces de repositórios
+│   │   ├── IRepository.cs
+│   │   ├── IGameRepository.cs
+│   │   └── IPlayerLibraryGames.cs
+│   └── PermissionType.cs          # Enum de permissões
 ├── Infrastructure/                # Camada de Infraestrutura
 │   ├── Repository/                # Implementações de repositórios
+│   │   ├── ApplicationDbContext.cs
+│   │   ├── EfRepository.cs
+│   │   ├── GameRepository.cs
+│   │   ├── PlayerLibraryGamesRepository.cs
+│   │   ├── InfrastructureInjection.cs
+│   │   └── Configuration/
+│   │       ├── GameConfiguration.cs
+│   │       └── PlayerLibraryGamesConfiguration.cs
 │   ├── Migrations/                # Migrações do EF Core
 │   └── Infrastructure.csproj
 ├── k8s/                           # Manifestos Kubernetes
-│   ├── catalog-deployment.yaml
+│   ├── catalog-deployment.yaml    # Deployment da API (produção)
+│   ├── catalog-pod.yaml           # Pod da API (desenvolvimento)
 │   ├── catalog-service.yaml
+│   ├── catalog-configmap.yaml
+│   ├── catalog-secret.yaml
 │   ├── sql-deployment.yaml
-│   └── scripts de deploy
+│   ├── sql-service.yaml
+│   ├── k8s-start-all-deploy.sh    # Deploy completo (produção)
+│   ├── k8s-start-all-dev.sh       # Deploy completo (desenvolvimento)
+│   ├── k8s-deploy-db.sh
+│   ├── k8s-deploy-api.sh
+│   ├── k8s-dev-api.sh             # Deploy pod de desenvolvimento
+│   ├── k8s-delete-all.sh
+│   └── env.sh
 ├── docker-compose.yaml            # Orquestração Docker
-├── Dockerfile                     # Imagem Docker
+├── Dockerfile                     # Imagem Docker (com New Relic)
 ├── .dockerignore
 ├── .gitignore
 └── README.md
