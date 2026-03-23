@@ -318,9 +318,9 @@ public class GamesController : ControllerBase
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             
-            //Console.WriteLine($"userRole: {userRole} | username:  {username} | userId: {userId}");
+            Console.WriteLine($"userRole: {userRole} | username:  {username} | userId: {userId}");
             
-            Console.WriteLine($"Cria Ordem de compra Usesr: {orderInput.GameId} | Game:  {orderInput.UserId} ");
+            Console.WriteLine($"Cria Ordem de compra User: {orderInput.UserId} | Game:  {orderInput.GameId} ");
             
             var game = _gameRepository.GetById(orderInput.GameId);
             
@@ -332,7 +332,7 @@ public class GamesController : ControllerBase
             await _rabbitMqService.PublishAsync(
                 "order.events",
                 "order.ordered",
-                new OrderPlacedEvent(1, "teste", "TesTT", orderInput.GameId, game.Price),CancellationToken.None
+                new OrderPlacedEvent(orderInput.UserId, "teste", "TesTT", orderInput.GameId, game.Price),CancellationToken.None
             );
             
             
