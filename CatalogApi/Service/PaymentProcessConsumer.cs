@@ -18,10 +18,6 @@ public class PaymentProcessConsumer : BackgroundService
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // exchange: "payments.events",
-        // queue: "payments.process",
-        // routingKey: "payment.requested",
-        
         await _rabbitMqService.ConsumeAsync<PaymentProcessedEvent>(
             exchange: "payments.events",
             queue: "payments.process",
