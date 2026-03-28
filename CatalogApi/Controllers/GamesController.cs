@@ -314,13 +314,9 @@ public class GamesController : ControllerBase
     {
         try
         {
-            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-            var username = User.FindFirst(ClaimTypes.Name)?.Value;
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
-            Console.WriteLine($"userRole: {userRole} | username:  {username} | userId: {userId}");
-            
-            Console.WriteLine($"Cria Ordem de compra User: {orderInput.UserId} | Game:  {orderInput.GameId} ");
+            // var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            // var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            // var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             
             var game = _gameRepository.GetById(orderInput.GameId);
             
@@ -336,12 +332,13 @@ public class GamesController : ControllerBase
             );
             
             
-            //_logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) Criado Ordem de compra por: {username}");
+            _logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) Criado Ordem de compra por: {orderInput.UserId}");
+            
             return CreatedAtAction(nameof(Get), new { id = game.Id }, orderInput);
         }
         catch (Exception e)
         {
-            _logger.LogError($"Erro ao criar jogo: {e.Message}");
+            _logger.LogError($"Erro ao criar ordem de compra jogo: {e.Message}");
             return StatusCode(StatusCodes.Status500InternalServerError, new 
             { 
                 message = "Erro interno do servidor.",
@@ -358,6 +355,7 @@ public class GamesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult Health()
     {
+        _logger.LogInformation($"Health");
         return Ok(new 
         { 
             status = "healthy", 
