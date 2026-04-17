@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,13 +16,13 @@ namespace Infrastructure.Migrations
                 name: "Games",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INT", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "VARCHAR(100)", nullable: false),
                     Category = table.Column<string>(type: "VARCHAR(100)", nullable: false),
-                    Active = table.Column<bool>(type: "BIT", nullable: false),
-                    Price = table.Column<decimal>(type: "DECIMAL(7,4)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "DATETIME", nullable: false)
+                    Active = table.Column<bool>(type: "BOOLEAN", nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(7,4)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TIMESTAMP", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,11 +33,11 @@ namespace Infrastructure.Migrations
                 name: "PlayerLibraryGames",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INT", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<int>(type: "INT", nullable: false),
-                    GameId = table.Column<int>(type: "INT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "DATETIME", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
+                    GameId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TIMESTAMP", nullable: false)
                 },
                 constraints: table =>
                 {
