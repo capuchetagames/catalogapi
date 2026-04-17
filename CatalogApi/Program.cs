@@ -85,4 +85,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+Console.WriteLine("Catalog API is up");
+
 app.Run();
