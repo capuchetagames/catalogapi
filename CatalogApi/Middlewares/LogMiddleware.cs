@@ -1,23 +1,23 @@
 using Core.Models;
 using Microsoft.Extensions.Primitives;
 
-namespace CloudGamesApi.Middlewares;
+namespace CatalogApi.Middlewares;
 
 public class LogMiddleware
 {
     private readonly RequestDelegate _next;
     private const string _correlationIdHeader = "X-Correlation-ID";
+    public  const string ItemsKey      = "CorrelationId"; 
     public LogMiddleware(RequestDelegate next)
     {
         _next = next;
     }
 
-    public Task Invoke(HttpContext context, ICorrelationIdService correlationIdServiceService)
+    public Task InvokeAsync(HttpContext context, ICorrelationIdService correlationIdServiceService)
     {
         var correlationId = GetCorrelationId(context,  correlationIdServiceService);
         AddCorrelationIdHeaderToResponse(context, correlationId);
-        
-        
+
         return _next(context);
     }
     private StringValues GetCorrelationId(HttpContext context, ICorrelationIdService correlationIdServiceService)
@@ -25,12 +25,14 @@ public class LogMiddleware
         if (context.Request.Headers.TryGetValue(_correlationIdHeader, out var correlationId))
         {
             correlationIdServiceService.Set(correlationId);
+            context.Items[ItemsKey] = correlationId;
             return correlationId;
         }
         
         correlationId = Guid.NewGuid().ToString();
         
         correlationIdServiceService.Set(correlationId);
+        context.Items[ItemsKey] = correlationId;
         
         return correlationId;
     }

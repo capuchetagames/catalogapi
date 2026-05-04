@@ -1,25 +1,39 @@
+using Amazon.DynamoDBv2;
 using CatalogApi.Config;
+using CatalogApi.Middlewares;
 using CatalogApi.Service;
+using CatalogApi.Service.DynamoLogging;
 using Core.Models;
 using Core.Repository;
 using Infrastructure.Repository;
 using Microsoft.Extensions.Options;
-using NewRelic.LogEnrichers.Serilog;
-using Serilog;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
-    .Enrich.FromLogContext()
-    .Enrich.WithNewRelicLogsInContext() // método do pacote
-    .WriteTo.File(
-        path: "logs/app.log.json",
-        formatter: new NewRelicFormatter(),
-        rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+// Log.Logger = new LoggerConfiguration()
+//     .Enrich.FromLogContext()
+//     .Enrich.WithNewRelicLogsInContext() // método do pacote
+//     .WriteTo.File(
+//         path: "logs/app.log.json",
+//         formatter: new NewRelicFormatter(),
+//         rollingInterval: RollingInterval.Day)
+//     .CreateLogger();
+//
+// builder.Host.UseSerilog();
 
-builder.Host.UseSerilog();
+
+builder.Services.AddDynamoDb(builder.Configuration);
+
+var serviceProvider = builder.Services.BuildServiceProvider();
+var dynamoClient    = serviceProvider.GetRequiredService<IAmazonDynamoDB>();
+var logTableName    = builder.Configuration["DynamoDb:LogTableName"];
+
+
+builder.Logging
+    .ClearProviders()                      
+    .AddConsole()                          
+    .AddDynamoDbLogger(dynamoClient, logTableName, LogLevel.Information);
+
 
 
 builder.Services.AddControllers();
@@ -28,6 +42,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddTransient<ICorrelationIdService, CorrelationIdService>();
+
+builder.Services.AddScoped(typeof(IBaseLogger<>), typeof(BaseLogger<>));
 
 // Configuração do cache
 builder.Services.AddMemoryCache();
@@ -64,6 +82,9 @@ builder.Services.AddHostedService<PaymentProcessConsumer>();
 
 var app = builder.Build();
 
+app.UseLogMiddleware();
+app.UseDynamoLogging();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -84,5 +105,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+Console.WriteLine("Catalog API is up");
 
 app.Run();
