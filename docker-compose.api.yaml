@@ -12,6 +12,8 @@
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
       Jwt__Key: ${Jwt__Key}
+      DynamoDb__LocalUrl: ${DynamoDb__LocalUrl}
+      DynamoDb__UseLocal: ${DynamoDb__UseLocal}
     networks:
       - microsservicos-net
 
