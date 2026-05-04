@@ -1,0 +1,23 @@
+﻿services:
+  catalog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: catalog_api
+    restart: on-failure
+    ports:
+      - "5245:8080" 
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
+      Jwt__Key: ${Jwt__Key}
+      DynamoDb__LocalUrl: ${DynamoDb__LocalUrl}
+      DynamoDb__UseLocal: ${DynamoDb__UseLocal}
+    networks:
+      - microsservicos-net
+
+networks:
+  microsservicos-net:
+    name: app-network
+    driver: bridge
