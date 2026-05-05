@@ -24,15 +24,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDynamoDb(builder.Configuration);
 
-var serviceProvider = builder.Services.BuildServiceProvider();
-var dynamoClient    = serviceProvider.GetRequiredService<IAmazonDynamoDB>();
 var logTableName    = builder.Configuration["DynamoDb:LogTableName"];
-
 
 builder.Logging
     .ClearProviders()                      
     .AddConsole()                          
-    .AddDynamoDbLogger(dynamoClient, logTableName, LogLevel.Information);
+    .AddDynamoDbLogger(logTableName, LogLevel.Information);
 
 
 
@@ -74,7 +71,9 @@ builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("R
 builder.Services.AddSingleton<IRabbitMqService>(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<RabbitMqSettings>>().Value;
-    return new RabbitMqService(settings);
+    var logger = sp.GetRequiredService<ILogger<RabbitMqService>>();
+    
+    return RabbitMqService.CreateAsync(settings, logger).GetAwaiter().GetResult();
 });
 
 builder.Services.AddHostedService<PaymentProcessConsumer>();

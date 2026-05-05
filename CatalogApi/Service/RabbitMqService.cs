@@ -10,23 +10,56 @@ namespace CatalogApi.Service;
 
 public class RabbitMqService : IRabbitMqService
 {
-    private readonly IConnection _connection;
-    private readonly IChannel _publishChannel;
+    private readonly ILogger<RabbitMqService>? _logger;
+    
+    private IConnection? _connection;
+    private IChannel? _publishChannel;
 
     private readonly ConcurrentBag<IChannel> _consumerChannels = new();
-
-    public RabbitMqService(RabbitMqSettings settings)
+    private RabbitMqService() { }
+    
+    public static async Task<RabbitMqService> CreateAsync(RabbitMqSettings settings, ILogger<RabbitMqService> logger, CancellationToken cancellationToken = default)
     {
         var factory = new ConnectionFactory
         {
             HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? settings.Host,
             UserName = settings.User,
             Password = settings.Password,
-            AutomaticRecoveryEnabled = true
+            AutomaticRecoveryEnabled = true,
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
         };
 
-        _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
-        _publishChannel = _connection.CreateChannelAsync().GetAwaiter().GetResult();
+        int[] retryDelays = [5, 10, 20, 30];
+        IConnection? connection = null;
+
+        foreach (var delay in retryDelays)
+        {
+            try
+            {
+                connection = await factory.CreateConnectionAsync(cancellationToken);
+                break;
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                Console.WriteLine($"[RabbitMQ] Falha ao conectar, tentando em {delay}s...({ex.Message})", delay);
+                await Task.Delay(TimeSpan.FromSeconds(delay), cancellationToken);
+            }
+        }
+
+        if (connection is null || !connection.IsOpen)
+        {
+            logger.LogError("[RabbitMQ] Não foi possível conectar após todas as tentativas.");
+            throw new InvalidOperationException("[RabbitMQ] Não foi possível conectar após todas as tentativas.");
+        }
+            
+        
+        var instance = new RabbitMqService();
+        instance._connection = connection;
+        instance._publishChannel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        
+        Console.WriteLine($"[RabbitMQ] Conectado com sucesso! ({connection.Endpoint.HostName}:{connection.Endpoint.Port})");
+        
+        return instance;
     }
 
     public async Task PublishAsync<T>(string exchange, string routingKey, T message, CancellationToken cancellationToken)

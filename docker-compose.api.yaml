@@ -12,10 +12,17 @@
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
       Jwt__Key: ${Jwt__Key}
-      DynamoDb__LocalUrl: ${DynamoDb__LocalUrl}
+      DynamoDb__LocalUrl: ${DynamoDb__LocalUrl} 
       DynamoDb__UseLocal: ${DynamoDb__UseLocal}
+      DynamoDb__LogTableName: ${DynamoDb__LogTableName}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
     networks:
       - microsservicos-net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
 networks:
   microsservicos-net:

@@ -11,7 +11,7 @@ public sealed class DynamoDbLoggerProvider : ILoggerProvider, ISupportExternalSc
     
     private IExternalScopeProvider _scopeProvider;
 
-    public DynamoDbLoggerProvider(IAmazonDynamoDB client, string tableName, LogLevel minLevel = LogLevel.Warning)  // padrão: só Warning pra cima
+    public DynamoDbLoggerProvider(IAmazonDynamoDB client, string tableName, LogLevel minLevel = LogLevel.Warning)
     {
         _client    = client;
         _tableName = tableName;
