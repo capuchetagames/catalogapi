@@ -58,24 +58,31 @@ public class DynamoDbLogger : ILogger
 
         return correlationId;
     }
+    
+    
+    private void AddIfNotEmpty(Dictionary<string, AttributeValue> item, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            item[key] = new AttributeValue { S = value };
+        }
+    }
 
     private async Task PersistAsync(DynamoLogModel entry)
     {
         try
         {
-            var item = new Dictionary<string, AttributeValue>
-            {
-                ["Id"]          = new() { S = entry.Id },
-                ["Timestamp"]   = new() { S = entry.Timestamp },
-                ["Level"]       = new() { S = entry.Level },
-                ["Category"]    = new() { S = entry.Category },
-                ["Message"]     = new() { S = entry.Message },
-                ["Environment"] = new() { S = entry.Environment },
-                ["CorrelationId"] = new() { S = entry.CorrelationId }
-            };
+            var item = new Dictionary<string, AttributeValue>();
 
-            if (entry.Exception is not null)
-                item["Exception"] = new() { S = entry.Exception };
+            AddIfNotEmpty(item,"Id",            entry.Id);
+            AddIfNotEmpty(item,"CorrelationId", entry.CorrelationId);
+            AddIfNotEmpty(item,"Environment",   entry.Environment);
+            AddIfNotEmpty(item,"Level",         entry.Level);
+            AddIfNotEmpty(item,"Category",      entry.Category);
+            AddIfNotEmpty(item,"Message",       entry.Message);
+            AddIfNotEmpty(item,"Exception",     entry.Exception);
+            AddIfNotEmpty(item,"Timestamp",     entry.Timestamp);
+            
 
             await _client.PutItemAsync(new PutItemRequest
             {
@@ -83,9 +90,10 @@ public class DynamoDbLogger : ILogger
                 Item      = item
             });
         }
-        catch
+        catch (Exception ex)
         {
             // Silencia erros do logger para não causar loop infinito
+            Console.WriteLine($">>> ERRO ao gravar log no DynamoDB: {ex.Message}");
         }
     }
 
