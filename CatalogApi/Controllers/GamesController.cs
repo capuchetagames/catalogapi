@@ -21,6 +21,8 @@ public class GamesController : ControllerBase
     private readonly ICacheService _cacheService;
     private readonly ILogger<GamesController> _logger;
 
+    private const string GameListCacheKey = "gameList";
+
     public GamesController(IGameRepository gameRepository, ICacheService cacheService, ILogger<GamesController> logger, IRabbitMqService rabbitMqService)
     {
         _gameRepository = gameRepository;
@@ -42,16 +44,17 @@ public class GamesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<Game>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult Get()
+    public async Task<IActionResult> Get()
     {
         try
         {
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
             _logger.LogInformation($"Usuário {username} acessando lista de jogos.");
 
-            var gameListKey = "gameList";
+            var cachedGameList = await _cacheService.GetAsync<List<Game>>(GameListCacheKey);
             
-            var cachedGameList = _cacheService.Get(gameListKey);
+            //memory cache
+            //var cachedGameList = _cacheService.Get(GameListCacheKey);
 
             if (cachedGameList != null)
             {
@@ -59,9 +62,13 @@ public class GamesController : ControllerBase
             }
             
             var gameList = _gameRepository.GetAll();
-            
-            if(gameList.Count > 0) 
-                _cacheService.Set(gameListKey, gameList);
+
+            if (gameList.Count > 0)
+            {
+                await _cacheService.SetAsync(GameListCacheKey, gameList, TimeSpan.FromMinutes(15));
+                //memory cache
+                // _cacheService.Set(GameListCacheKey, gameList);
+            } 
             
             _logger.LogInformation($"Retornados {gameList.Count} jogos para usuário {username}.");
             return Ok(gameList);
@@ -91,7 +98,7 @@ public class GamesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult Get([FromRoute] int id)
+    public async Task<IActionResult> Get([FromRoute] int id)
     {
         try
         {
@@ -100,7 +107,8 @@ public class GamesController : ControllerBase
 
             var gameKey = $"game-{id}";
             
-            var cachedGame = _cacheService.Get(gameKey);
+            //var cachedGame = _cacheService.Get(gameKey);
+            var cachedGame = await _cacheService.GetAsync<Game>(gameKey);
             
             if (cachedGame != null)
             {
@@ -114,7 +122,8 @@ public class GamesController : ControllerBase
                 return NotFound(new { message = $"Jogo com ID {id} não encontrado." });
             }
             
-            _cacheService.Set(gameKey, game);
+            //_cacheService.Set(gameKey, game);
+            await _cacheService.SetAsync(gameKey, game, TimeSpan.FromMinutes(15));
             
             _logger.LogInformation($"Jogo {id} ({game.Name}) retornado para usuário {username}");
             return Ok(game);
@@ -142,7 +151,7 @@ public class GamesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult Post([FromBody] GameInput gameInput)
+    public async Task<IActionResult> Post([FromBody] GameInput gameInput)
     {
         try
         {
@@ -168,7 +177,9 @@ public class GamesController : ControllerBase
             _gameRepository.Add(game);
             
             // Limpar cache da lista de jogos
-            _cacheService.Remove("gameList");
+            await _cacheService.RemoveAsync(GameListCacheKey);
+            ///_cacheService.Remove(GameListCacheKey);
+            
             
             _logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) criado com sucesso pelo admin {username}");
             return CreatedAtAction(nameof(Get), new { id = game.Id }, game);
@@ -197,7 +208,7 @@ public class GamesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult Put([FromBody] UpdateGameInput gameInput)
+    public async Task<IActionResult> Put([FromBody] UpdateGameInput gameInput)
     {
         try
         {
@@ -228,8 +239,11 @@ public class GamesController : ControllerBase
             _gameRepository.Update(game);
             
             // Limpar cache relacionado
-            _cacheService.Remove($"game-{gameInput.Id}");
-            _cacheService.Remove("gameList");
+            await _cacheService.RemoveAsync(GameListCacheKey);
+            await _cacheService.RemoveAsync($"game-{gameInput.Id}");
+
+            // _cacheService.Remove($"game-{gameInput.Id}");
+            // _cacheService.Remove(GameListCacheKey);
             
             _logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) atualizado com sucesso pelo admin {username}");
             return NoContent();
@@ -256,7 +270,7 @@ public class GamesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult Delete([FromRoute] int id)
+    public async Task<IActionResult> Delete([FromRoute] int id)
     {
         try
         {
@@ -281,8 +295,11 @@ public class GamesController : ControllerBase
             _gameRepository.Delete(id);
             
             // Limpar cache relacionado
-            _cacheService.Remove($"game-{id}");
-            _cacheService.Remove("gameList");
+            await _cacheService.RemoveAsync(GameListCacheKey);
+            await _cacheService.RemoveAsync($"game-{id}");
+            
+            // _cacheService.Remove($"game-{id}");
+            // _cacheService.Remove("gameList");
             
             _logger.LogInformation($"Jogo {game.Name} (ID: {id}) deletado com sucesso pelo admin {username}");
             return NoContent();

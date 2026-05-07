@@ -15,31 +15,25 @@ public static class DynamoDbExtensions
         var profile  = configuration["DynamoDb:ProfileName"];
         var region   = configuration["AWS_DEFAULT_REGION"];
         
-        if (useLocal)
-        {
-            services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(new BasicAWSCredentials("fake", "fake"),
-                new AmazonDynamoDBConfig { ServiceURL = localUrl }));
-        }
-
-        if (!string.IsNullOrWhiteSpace(profile))
-        {
-            var credentials = ResolveProfileCredentials(profile);
-    
-            services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(credentials, RegionEndpoint.GetBySystemName(region)));    
-        }
-        else
-        {
-            services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(RegionEndpoint.GetBySystemName(region)));
-        }
-
-        services.AddSingleton<IDynamoDBContext>(provider =>
-        {
-            var client = provider.GetRequiredService<IAmazonDynamoDB>();
-        
-            return new DynamoDBContext(client);
-        });
+        services.AddSingleton<IAmazonDynamoDB>(CreateDynamoDbClient(useLocal, localUrl, profile, region));
         
         return services;
+    }
+    
+    private static IAmazonDynamoDB CreateDynamoDbClient(bool useLocal, string? localUrl, string? profile, string? region)
+    {
+        if (useLocal)
+        {
+            return new AmazonDynamoDBClient(new BasicAWSCredentials("fake", "fake"), new AmazonDynamoDBConfig { ServiceURL = localUrl });
+        }
+
+        //local false - connecting to aws with tokens
+        if (string.IsNullOrWhiteSpace(profile)) return new AmazonDynamoDBClient(RegionEndpoint.GetBySystemName(region));
+        
+        
+        //play rider - connecting to aws with profile
+        var credentials = ResolveProfileCredentials(profile);
+        return new AmazonDynamoDBClient(credentials, RegionEndpoint.GetBySystemName(region));
     }
 
     private static AWSCredentials ResolveProfileCredentials(string? profileName)
