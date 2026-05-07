@@ -3,6 +3,7 @@ using CatalogApi.Config;
 using CatalogApi.Middlewares;
 using CatalogApi.Service;
 using CatalogApi.Service.DynamoLogging;
+using CatalogApi.Service.RedisCache;
 using Core.Models;
 using Core.Repository;
 using Infrastructure.Repository;
@@ -29,7 +30,7 @@ var logTableName    = builder.Configuration["DynamoDb:LogTableName"];
 builder.Logging
     .ClearProviders()                      
     .AddConsole()                          
-    .AddDynamoDbLogger(logTableName, LogLevel.Information);
+    .AddDynamoDbLogger(logTableName, LogLevel.Warning);
 
 
 
@@ -44,9 +45,18 @@ builder.Services.AddTransient<ICorrelationIdService, CorrelationIdService>();
 
 builder.Services.AddScoped(typeof(IBaseLogger<>), typeof(BaseLogger<>));
 
-// Configuração do cache
-builder.Services.AddMemoryCache();
-builder.Services.AddTransient<ICacheService, MemCacheService>();
+
+//Config de cache com Redis
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["Redis:ConnectionString"];
+    options.InstanceName = "catalog:"; // prefixo nas chaves
+});
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+// Configuração do cache MemoryCache
+// builder.Services.AddMemoryCache();
+// builder.Services.AddTransient<ICacheService, MemCacheService>();
 
 // Registrar repositórios
 builder.Services.AddScoped<IGameRepository, GameRepository>();

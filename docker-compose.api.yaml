@@ -18,6 +18,7 @@
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      Redis__ConnectionString: ${REDIS_CONNECTION}
     networks:
       - microsservicos-net
     depends_on:

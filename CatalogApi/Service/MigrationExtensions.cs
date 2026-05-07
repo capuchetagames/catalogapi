@@ -18,15 +18,15 @@ public static class MigrationExtensions
             var retryCount = 10; // Tenta 10 vezes
             var waitTime = TimeSpan.FromSeconds(3); // Espera 3 segundos entre cada tentativa
 
-            for (int i = 0; i < retryCount; i++)
+            for (var i = 0; i < retryCount; i++)
             {
                 try
                 {
-                    logger.LogInformation($"Tentativa {i + 1} de {retryCount}: Conectando ao banco para migrar...");
+                    logger.LogWarning($"Tentativa {i + 1} de {retryCount}: Conectando ao banco para migrar...");
                     
                     context.Database.Migrate();
 
-                    logger.LogInformation("✅ Migrations aplicadas com sucesso!");
+                    logger.LogWarning("✅ Migrations aplicadas com sucesso!");
                     return; // Sai do método se funcionou
                 }
                 catch (Exception ex)

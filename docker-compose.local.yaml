@@ -18,6 +18,23 @@
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - microsservicos-net
+
+# Só no docker-compose.local.yml (override)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - microsservicos-net
+    depends_on:
+      - redis
       
 
   catalog-api:
