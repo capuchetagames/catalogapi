@@ -2,9 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: catalog-config
+  namespace: fiapstore
 data:
-  DB_HOST: "catalog-db"
-  DB_NAME: "Db.Catalog"
   ASPNETCORE_ENVIRONMENT: "Development"
-  ACCEPT_EULA: "Y"
-  MSSQL_PID: "Developer"
+  ASPNETCORE_URLS: "http://+:8080"
+  RABBITMQ_HOST: "rabbitmq"
+  UsersApi__BaseUrl: "http://users-api:8080/"
