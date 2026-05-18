@@ -112,7 +112,6 @@ public class GamesController : ControllerBase
 
             var gameKey = $"game-{id}";
             
-            //var cachedGame = _cacheService.Get(gameKey);
             var cachedGame = await _cacheService.GetAsync<Game>(gameKey);
             
             if (cachedGame != null)
@@ -127,7 +126,6 @@ public class GamesController : ControllerBase
                 return NotFound(new { message = $"Jogo com ID {id} não encontrado." });
             }
             
-            //_cacheService.Set(gameKey, game);
             await _cacheService.SetAsync(gameKey, game, TimeSpan.FromMinutes(15));
             
             _logger.LogInformation($"Jogo {id} ({game.Name}) retornado para usuário {username}");
@@ -187,9 +185,7 @@ public class GamesController : ControllerBase
             await _elasticClient.IndexAsync(game,CatalogIndexName);
             
             // Limpar cache da lista de jogos
-          //  await _cacheService.RemoveAsync(GameListCacheKey);
-            ///_cacheService.Remove(GameListCacheKey);
-            
+            await _cacheService.RemoveAsync(GameListCacheKey);
             
             _logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) criado com sucesso pelo admin {username}");
             return CreatedAtAction(nameof(Get), new { id = game.Id }, game);
@@ -226,11 +222,11 @@ public class GamesController : ControllerBase
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
 
             // Verificar se o usuário tem permissão de Admin
-            if (userRole != nameof(PermissionType.Admin))
-            {
-                _logger.LogWarning($"Usuário {username} tentou atualizar jogo {gameInput.Id} sem permissão de Admin.");
-                return Forbid("Acesso negado. Apenas administradores podem atualizar jogos.");
-            }
+            // if (userRole != nameof(PermissionType.Admin))
+            // {
+            //     _logger.LogWarning($"Usuário {username} tentou atualizar jogo {gameInput.Id} sem permissão de Admin.");
+            //     return Forbid("Acesso negado. Apenas administradores podem atualizar jogos.");
+            // }
 
             _logger.LogInformation($"Admin {username} atualizando jogo ID: {gameInput.Id}");
 
@@ -254,9 +250,6 @@ public class GamesController : ControllerBase
             // Limpar cache relacionado
             await _cacheService.RemoveAsync(GameListCacheKey);
             await _cacheService.RemoveAsync($"game-{gameInput.Id}");
-
-            // _cacheService.Remove($"game-{gameInput.Id}");
-            // _cacheService.Remove(GameListCacheKey);
             
             _logger.LogInformation($"Jogo {game.Name} (ID: {game.Id}) atualizado com sucesso pelo admin {username}");
             return NoContent();
@@ -297,7 +290,7 @@ public class GamesController : ControllerBase
             //     return Forbid("Acesso negado. Apenas administradores podem deletar jogos.");
             // }
 
-            _logger.LogInformation($"Admin {username} tentando deletar jogo ID: {id}");
+            _logger.LogInformation($"Usuário: {username} Role: {userRole} tentando deletar jogo ID: {id}");
 
             var game = _gameRepository.GetById(id);
             if (game == null)
@@ -313,9 +306,6 @@ public class GamesController : ControllerBase
             // Limpar cache relacionado
             await _cacheService.RemoveAsync(GameListCacheKey);
             await _cacheService.RemoveAsync($"game-{id}");
-            
-            // _cacheService.Remove($"game-{id}");
-            // _cacheService.Remove("gameList");
             
             _logger.LogInformation($"Jogo {game.Name} (ID: {id}) deletado com sucesso pelo admin {username}");
             return NoContent();
@@ -384,12 +374,12 @@ public class GamesController : ControllerBase
     
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? category = null,  string sort = "relevance")
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? category = null)
     {
         if (string.IsNullOrWhiteSpace(q))
             return BadRequest(new { error = "Parâmetro 'q' é obrigatório" });
         
-        var results = await _elasticClient.SearchAsync(CatalogIndexName, q, category, sort);
+        var results = await _elasticClient.SearchAsync(CatalogIndexName, q, category);
         
         return Ok(results);
     }
