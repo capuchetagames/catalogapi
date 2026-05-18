@@ -3,6 +3,7 @@ using Core;
 using Core.Dtos;
 using Core.Entity;
 using Core.Models;
+using Core.Models.ElasticSearch;
 using Core.Repository;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,15 +21,19 @@ public class GamesController : ControllerBase
     private readonly IRabbitMqService _rabbitMqService;
     private readonly ICacheService _cacheService;
     private readonly ILogger<GamesController> _logger;
+    private readonly IElasticClient<Game> _elasticClient;
 
+    private const string CatalogIndexName = "game-catalog";
     private const string GameListCacheKey = "gameList";
 
-    public GamesController(IGameRepository gameRepository, ICacheService cacheService, ILogger<GamesController> logger, IRabbitMqService rabbitMqService)
+    public GamesController(IGameRepository gameRepository, ICacheService cacheService, ILogger<GamesController> logger,
+        IRabbitMqService rabbitMqService, IElasticClient<Game> elasticClient)
     {
         _gameRepository = gameRepository;
         _cacheService = cacheService;
         _logger = logger;
         _rabbitMqService = rabbitMqService;
+        _elasticClient = elasticClient;
     }
 
     /// <summary>
@@ -157,15 +162,18 @@ public class GamesController : ControllerBase
         {
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            
+            _logger.LogInformation($"User: {username} Permissão: {userRole} criando novo jogo: {gameInput.Name}");
+            
 
             // Verificar se o usuário tem permissão de Admin
-            if (userRole != nameof(PermissionType.Admin))
-            {
-                _logger.LogWarning($"Usuário {username} tentou criar jogo sem permissão de Admin.");
-                return Forbid("Acesso negado. Apenas administradores podem criar jogos.");
-            }
-
-            _logger.LogInformation($"Admin {username} criando novo jogo: {gameInput.Name}");
+            // if (userRole != nameof(PermissionType.Admin))
+            // {
+            //     _logger.LogWarning($"Usuário {username} tentou criar jogo sem permissão de Admin.");
+            //     return Forbid("Acesso negado. Apenas administradores podem criar jogos.");
+            // }
+            //
+            // _logger.LogInformation($"Admin {username} criando novo jogo: {gameInput.Name}");
 
             var game = new Game()
             {
@@ -176,8 +184,10 @@ public class GamesController : ControllerBase
             };
             _gameRepository.Add(game);
             
+            await _elasticClient.IndexAsync(game,CatalogIndexName);
+            
             // Limpar cache da lista de jogos
-            await _cacheService.RemoveAsync(GameListCacheKey);
+          //  await _cacheService.RemoveAsync(GameListCacheKey);
             ///_cacheService.Remove(GameListCacheKey);
             
             
@@ -238,6 +248,9 @@ public class GamesController : ControllerBase
             
             _gameRepository.Update(game);
             
+            //ElasticSearch
+            await _elasticClient.IndexAsync(game,CatalogIndexName);
+            
             // Limpar cache relacionado
             await _cacheService.RemoveAsync(GameListCacheKey);
             await _cacheService.RemoveAsync($"game-{gameInput.Id}");
@@ -278,11 +291,11 @@ public class GamesController : ControllerBase
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
 
             // Verificar se o usuário tem permissão de Admin
-            if (userRole != nameof(PermissionType.Admin))
-            {
-                _logger.LogWarning($"Usuário {username} tentou deletar jogo {id} sem permissão de Admin.");
-                return Forbid("Acesso negado. Apenas administradores podem deletar jogos.");
-            }
+            // if (userRole != nameof(PermissionType.Admin))
+            // {
+            //     _logger.LogWarning($"Usuário {username} tentou deletar jogo {id} sem permissão de Admin.");
+            //     return Forbid("Acesso negado. Apenas administradores podem deletar jogos.");
+            // }
 
             _logger.LogInformation($"Admin {username} tentando deletar jogo ID: {id}");
 
@@ -293,6 +306,9 @@ public class GamesController : ControllerBase
             }
             
             _gameRepository.Delete(id);
+            
+            //ElasticSearch
+            await _elasticClient.DeleteAsync(id,CatalogIndexName);
             
             // Limpar cache relacionado
             await _cacheService.RemoveAsync(GameListCacheKey);
@@ -361,6 +377,42 @@ public class GamesController : ControllerBase
                 message = "Erro interno do servidor.",
                 error = e.Message
             });
+        }
+    }
+    
+    
+    
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? category = null,  string sort = "relevance")
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return BadRequest(new { error = "Parâmetro 'q' é obrigatório" });
+        
+        var results = await _elasticClient.SearchAsync(CatalogIndexName, q, category, sort);
+        
+        return Ok(results);
+    }
+    
+    [HttpPost("reindex")]
+    public async Task<IActionResult> Reindex()
+    {
+        try
+        {
+            var games = _gameRepository.GetAll();
+        
+            foreach (var game in games)
+            {
+                await _elasticClient.IndexAsync(game, CatalogIndexName);
+            }
+        
+            _logger.LogInformation($"{games.Count} jogos reindexados com sucesso.");
+            return Ok(new { message = $"{games.Count} jogos reindexados com sucesso." });
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Erro ao reindexar: {e.Message}");
+            return StatusCode(500, new { message = "Erro ao reindexar.", error = e.Message });
         }
     }
 
