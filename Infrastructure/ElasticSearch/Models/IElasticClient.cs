@@ -8,7 +8,7 @@ public interface IElasticClient<T>
     
     Task<bool> IndexAsync(T item, IndexName indexName);
 
-    Task<IReadOnlyCollection<T>> SearchAsync(IndexName indexName, string query, string? category = null, string sort = "relevance");
+    Task<IReadOnlyCollection<T>> SearchAsync(IndexName indexName, string query, string? category = null);
     Task DeleteAsync(int id, IndexName indexName);
     
     Task ReindexAllAsync(List<T> items);

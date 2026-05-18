@@ -33,7 +33,7 @@ public class ElasticClient<T> : IElasticClient<T>
         return response.IsValidResponse;
     }
 
-    public async Task<IReadOnlyCollection<T>> SearchAsync(IndexName indexName, string query, string? category = null, string sort = "relevance")
+    public async Task<IReadOnlyCollection<T>> SearchAsync(IndexName indexName, string query, string? category = null)
     {
         var response = await _client.SearchAsync<T>(s => s
             .Index(indexName.ToString())
