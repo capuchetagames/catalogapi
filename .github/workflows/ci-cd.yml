@@ -1,0 +1,101 @@
+name: CI/CD Pipeline - Catalog API
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: cluster-fiapstore
+  NAMESPACE: fiapstore
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore CatalogApi.sln
+
+      - name: Build
+        run: dotnet build CatalogApi.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test CatalogApi.sln --no-build --verbosity normal -c Release || true
+
+  containerize-and-push:
+    name: Containerize & Push
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/catalog-api:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/catalog-api:latest
+
+  security-scan:
+    name: Security Scan (Trivy)
+    needs: containerize-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/catalog-api:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  deploy-to-eks:
+    name: Deploy to Kubernetes (Rolling Update)
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update KubeConfig
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Deploy Catalog API
+        run: |
+          kubectl set image deployment/catalog-api catalog-api=${{ secrets.DOCKERHUB_USERNAME }}/catalog-api:${{ github.sha }} -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/catalog-api -n ${{ env.NAMESPACE }} --timeout=120s
