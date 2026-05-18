@@ -1,11 +1,16 @@
 using Amazon.DynamoDBv2;
 using CatalogApi.Config;
+using CatalogApi.health;
 using CatalogApi.Middlewares;
 using CatalogApi.Service;
 using CatalogApi.Service.DynamoLogging;
 using CatalogApi.Service.RedisCache;
 using Core.Models;
+using Core.Models.ElasticSearch;
 using Core.Repository;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
+using Infrastructure.ElasticSearch;
 using Infrastructure.Repository;
 using Microsoft.Extensions.Options;
 
@@ -44,6 +49,20 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddTransient<ICorrelationIdService, CorrelationIdService>();
 
 builder.Services.AddScoped(typeof(IBaseLogger<>), typeof(BaseLogger<>));
+
+
+//ElasticSearch
+builder.Services.Configure<ElasticSettings>(builder.Configuration.GetSection("ElasticSettings"));
+
+builder.Services.AddSingleton<IElasticSettings>(sp =>
+{
+    var options = sp.GetRequiredService<IOptions<ElasticSettings>>();
+    return options.Value;
+});
+
+builder.Services.AddSingleton(typeof(IElasticClient<>), typeof(ElasticClient<>));
+
+builder.Services.AddHealthChecks().AddCheck<ElasticsearchHealthCheck>("elasticsearch");
 
 
 //Config de cache com Redis

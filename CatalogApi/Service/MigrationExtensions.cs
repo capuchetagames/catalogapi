@@ -29,6 +29,11 @@ public static class MigrationExtensions
                     logger.LogWarning("✅ Migrations aplicadas com sucesso!");
                     return; // Sai do método se funcionou
                 }
+                catch (Exception ex) when (ex.Message.Contains("42P07"))
+                {
+                    logger.LogWarning("⚠️ Tabelas já existem no banco (42P07). Considerando migrations como aplicadas.");
+                    return; // Trata como sucesso
+                }
                 catch (Exception ex)
                 {
                     logger.LogWarning($"⚠️ Falha ao conectar no banco (Tentativa {i + 1}). O container pode estar subindo ainda.");
