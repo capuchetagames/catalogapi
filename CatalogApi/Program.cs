@@ -62,7 +62,7 @@ builder.Services.AddSingleton<IElasticSettings>(sp =>
 
 builder.Services.AddSingleton(typeof(IElasticClient<>), typeof(ElasticClient<>));
 
-builder.Services.AddHealthChecks().AddCheck<ElasticsearchHealthCheck>("elasticsearch");
+// builder.Services.AddHealthChecks().AddCheck<ElasticsearchHealthCheck>("elasticsearch");
 
 
 //Config de cache com Redis
