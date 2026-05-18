@@ -7,9 +7,9 @@ on:
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  ELASTICSETTINGS__APIKEY: ${{ secrets.ELASTICSETTINGS__APIKEY }}
-  ELASTICSETTINGS__CLOUDID: ${{ secrets.ELASTICSETTINGS__CLOUDID }}
-  ELASTICSETTINGS__USECLOUD: ${{ secrets.ELASTICSETTINGS__USECLOUD }}
+  ElasticSettings__ApiKey: ${{ secrets.ELASTICSETTINGS__APIKEY }}
+  ElasticSettings__UseCloud: ${{ secrets.ELASTICSETTINGS__CLOUDID }}
+  ElasticSettings__CloudId: ${{ secrets.ELASTICSETTINGS__USECLOUD }}
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: cluster-fiapstore
   NAMESPACE: fiapstore
