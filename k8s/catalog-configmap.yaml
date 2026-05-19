@@ -8,3 +8,6 @@ data:
   ASPNETCORE_URLS: "http://+:8080"
   RABBITMQ_HOST: "rabbitmq"
   UsersApi__BaseUrl: "http://users-api:8080/"
+  DynamoDb__LogTableName: "catalog-logs"
+  DynamoDb__UseLocal: "false"
+  DynamoDb__Region: "us-east-2"
