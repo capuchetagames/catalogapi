@@ -8,8 +8,8 @@ on:
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   ElasticSettings__ApiKey: ${{ secrets.ELASTICSETTINGS__APIKEY }}
-  ElasticSettings__UseCloud: ${{ secrets.ELASTICSETTINGS__CLOUDID }}
-  ElasticSettings__CloudId: ${{ secrets.ELASTICSETTINGS__USECLOUD }}
+  ElasticSettings__UseCloud: ${{ secrets.ELASTICSETTINGS__USECLOUD }}
+  ElasticSettings__CloudId: ${{ secrets.ELASTICSETTINGS__CLOUDID }}
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: cluster-fiapstore
   NAMESPACE: fiapstore
@@ -97,6 +97,14 @@ jobs:
       - name: Update KubeConfig
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Inject Elastic environment variables
+        run: |
+          kubectl set env deployment/catalog-api \
+            ElasticSettings__ApiKey="${{ secrets.ELASTICSETTINGS__APIKEY }}" \
+            ElasticSettings__UseCloud="${{ secrets.ELASTICSETTINGS__USECLOUD }}" \
+            ElasticSettings__CloudId="${{ secrets.ELASTICSETTINGS__CLOUDID }}" \
+            -n ${{ env.NAMESPACE }}
 
       - name: Deploy Catalog API
         run: |
