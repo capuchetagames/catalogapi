@@ -25,7 +25,7 @@ jobs:
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
       - name: Restore dependencies
         run: dotnet restore CatalogApi.sln
@@ -71,12 +71,12 @@ jobs:
       - name: Scan Image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/catalog-api:${{ github.sha }}'
-          format: 'table'
-          exit-code: '0'
+          image-ref: "${{ secrets.DOCKERHUB_USERNAME }}/catalog-api:${{ github.sha }}"
+          format: "table"
+          exit-code: "0"
           ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
 
   deploy-to-eks:
     name: Deploy to Kubernetes (Rolling Update)
@@ -98,12 +98,20 @@ jobs:
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
-      - name: Inject Elastic environment variables
+      - name: Inject environment variables
         run: |
           kubectl set env deployment/catalog-api \
+            DB_CONNECTION_STRING="${{ secrets.DB_CONNECTION_STRING }}" \
+            Jwt__Key="${{ secrets.JWT_KEY }}" \
+            DynamoDb__LogTableName="catalog-logs" \
+            DynamoDb__UseLocal="false" \
+            DynamoDb__Region="us-east-2" \
             ElasticSettings__ApiKey="${{ secrets.ELASTICSETTINGS__APIKEY }}" \
             ElasticSettings__UseCloud="${{ secrets.ELASTICSETTINGS__USECLOUD }}" \
             ElasticSettings__CloudId="${{ secrets.ELASTICSETTINGS__CLOUDID }}" \
+            AWS_ACCESS_KEY_ID="${{ secrets.LAMBDA_AWS_ACCESS_KEY_ID }}" \
+            AWS_SECRET_ACCESS_KEY="${{ secrets.LAMBDA_AWS_SECRET_ACCESS_KEY }}" \
+            AWS_DEFAULT_REGION="us-east-2" \
             -n ${{ env.NAMESPACE }}
 
       - name: Deploy Catalog API
