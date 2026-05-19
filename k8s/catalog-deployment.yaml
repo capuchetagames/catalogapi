@@ -49,6 +49,21 @@ spec:
                 secretKeyRef:
                   name: catalog-secret
                   key: Jwt__Key
+            - name: ElasticSettings__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-secret
+                  key: ElasticSettings__ApiKey
+            - name: ElasticSettings__CloudId
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-secret
+                  key: ElasticSettings__CloudId
+            - name: ElasticSettings__UseCloud
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-secret
+                  key: ElasticSettings__UseCloud
           resources:
             requests:
               cpu: "100m"
