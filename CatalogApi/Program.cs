@@ -35,7 +35,7 @@ var logTableName    = builder.Configuration["DynamoDb:LogTableName"];
 builder.Logging
     .ClearProviders()                      
     .AddConsole()                          
-    .AddDynamoDbLogger(logTableName, LogLevel.Warning);
+    .AddDynamoDbLogger(logTableName, LogLevel.Information);
 
 
 
