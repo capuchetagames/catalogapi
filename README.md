@@ -1,447 +1,216 @@
 # Catalog API 🎮
 
-API de catálogo de jogos desenvolvida em .NET 8, responsável pelo gerenciamento CRUD de jogos e iniciação do fluxo de compra. Parte de uma arquitetura de microsserviços para uma plataforma de jogos digitais.
+API de catálogo de jogos desenvolvida em .NET 8, responsável pelo CRUD de jogos, busca textual no catálogo, publicação de pedidos de compra e consumo de eventos de pagamento.
 
-## 🎯 Sobre o Projeto
+## Sobre o projeto
 
-A Catalog API é um microsserviço que gerencia o catálogo de jogos da plataforma. Ela oferece funcionalidades completas de CRUD para jogos, autenticação distribuída via UserAPI, sistema de cache em memória para otimização de performance, e integração com RabbitMQ para processamento assíncrono de pedidos.
+A Catalog API faz parte de uma arquitetura de microsserviços da plataforma de jogos e atualmente inclui:
 
-### Características Principais
+- CRUD de jogos
+- Busca de jogos com Elasticsearch
+- Cache distribuído com Redis
+- Persistência com Entity Framework Core + PostgreSQL
+- Publicação e consumo de eventos com RabbitMQ
+- Logging em DynamoDB
+- Health checks da aplicação
 
-- **CRUD Completo de Jogos**: Criação, leitura, atualização e exclusão de jogos
-- **Biblioteca de Jogos do Usuário**: Gerenciamento da biblioteca pessoal de cada jogador
-- **Sistema de Permissões**: Controle de acesso baseado em roles (Admin/User)
-- **Autenticação Distribuída**: Validação de tokens JWT via UserAPI
-- **Cache em Memória**: Otimização de performance com MemoryCache
-- **Mensageria Assíncrona**: Integração com RabbitMQ para fluxo de compras
-- **Health Checks**: Endpoints de monitoramento de saúde da aplicação
-- **Observabilidade com New Relic**: APM, rastreamento distribuído e monitoramento de performance
-- **Logging Estruturado**: Serilog com enriquecimento NewRelic e saída em arquivo JSON rotativo
+## Funcionalidades
 
-## ⚡ Funcionalidades
+### Gestão de jogos
+-  Listar jogos
+-  Buscar jogo por ID
+-  Criar jogo (somente Admin)
+-  Atualizar jogo (somente Admin)
+-  Deletar jogo (somente Admin)
+-  Criar ordem de compra (`order.events`)
+-  Buscar jogos com texto e filtro de categoria
+-  Reindexar catálogo no Elasticsearch
 
-### Gestão de Jogos
-- ✅ Listar todos os jogos (com cache)
-- ✅ Buscar jogo por ID
-- ✅ Criar novo jogo (somente Admin)
-- ✅ Atualizar jogo existente (somente Admin)
-- ✅ Deletar jogo (somente Admin)
-- ✅ Iniciar ordem de compra
+### Biblioteca do jogador
+-  Endpoint de biblioteca (`my-games`)
+-  Endpoint de health da biblioteca
 
-### Biblioteca do Jogador
-- ✅ Visualizar biblioteca pessoal de jogos
-- ✅ Histórico de compras
-
-## 🛠 Tecnologias
+## Stack atual
 
 ### Backend
-- **.NET 8.0** - Framework principal
-- **ASP.NET Core** - Web API
-- **Entity Framework Core** - ORM
-- **SQL Server 2022** - Banco de dados
+- .NET 8 / ASP.NET Core
+- Entity Framework Core
+- Npgsql (PostgreSQL)
 
-### Infraestrutura
-- **Docker** - Containerização
-- **Docker Compose** - Orquestração local
-- **Kubernetes** - Orquestração em produção
-- **RabbitMQ** - Message Broker
+### Infra e integrações
+- PostgreSQL 16
+- Redis (cache distribuído)
+- Elasticsearch 8
+- RabbitMQ
+- DynamoDB (logs)
+- Docker / Docker Compose
+- Kubernetes (manifestos na pasta `k8s/`)
 
-### Bibliotecas e Ferramentas
-- **Swagger/OpenAPI** - Documentação da API
-- **ReDoc** - Interface alternativa de documentação da API
-- **Serilog** - Logging estruturado com sink de arquivo JSON rotativo
-- **New Relic** - APM, monitoramento e enriquecimento de logs
-- **FluentValidation** - Validação de dados de entrada
-- **MemoryCache** - Sistema de cache
-- **Health Checks** - Monitoramento
+### Bibliotecas
+- Swashbuckle (Swagger)
+- FluentValidation
+- AWSSDK.DynamoDBv2
+- RabbitMQ.Client
+- Elastic.Clients.Elasticsearch
+- Serilog + New Relic enrichers
 
-## 🏗 Arquitetura
-
-O projeto segue os princípios de **Clean Architecture** com separação em camadas:
-
-```
-CatalogApi/
-├── CatalogApi/          # Camada de apresentação (Controllers, Middlewares)
-├── Core/                # Camada de domínio (Entities, DTOs, Interfaces)
-└── Infrastructure/      # Camada de infraestrutura (Repositories, Migrations)
-```
-
-### Comunicação com Outros Serviços
-
-- **UserAPI**: Validação de tokens JWT e autenticação distribuída
-- **RabbitMQ**: Publicação de eventos de pedidos de compra e consumo de eventos de pagamento
-- **PaymentAPI** (consumidor): Processamento de pagamentos e envio de evento de confirmação
-
-## 📡 Endpoints da API
-
-### Games Controller
-
-#### `GET /api/Games`
-Lista todos os jogos disponíveis.
-- **Autenticação**: Requerida
-- **Resposta**: `200 OK` - Lista de jogos
-
-#### `GET /api/Games/{id}`
-Busca um jogo específico por ID.
-- **Autenticação**: Requerida
-- **Parâmetros**: `id` (int)
-- **Resposta**: `200 OK` - Objeto do jogo
-
-#### `POST /api/Games`
-Cria um novo jogo.
-- **Autenticação**: Requerida (Admin)
-- **Body**:
-```json
-{
-  "name": "Nome do Jogo",
-  "category": "Categoria",
-  "price": 99.99,
-  "active": true
-}
-```
-- **Resposta**: `201 Created` - Jogo criado
-
-#### `PUT /api/Games`
-Atualiza um jogo existente.
-- **Autenticação**: Requerida (Admin)
-- **Body**:
-```json
-{
-  "id": 1,
-  "name": "Nome Atualizado",
-  "category": "Nova Categoria",
-  "price": 79.99,
-  "active": true
-}
-```
-- **Resposta**: `204 No Content`
-
-#### `DELETE /api/Games/{id}`
-Remove um jogo do catálogo.
-- **Autenticação**: Requerida (Admin)
-- **Parâmetros**: `id` (int)
-- **Resposta**: `204 No Content`
-
-#### `POST /order-game`
-Cria uma ordem de compra para um jogo. Publica o evento `order.ordered` no exchange `order.events` do RabbitMQ.
-- **Autenticação**: Requerida
-- **Body**:
-```json
-{
-  "userId": 1,
-  "gameId": 1
-}
-```
-- **Resposta**: `201 Created` - Ordem criada
-
-#### `GET /api/Games/health`
-Verifica o status do serviço de catálogo.
-- **Resposta**: `200 OK`
-
-### Player Library Controller
-
-#### `GET /api/PlayerLibrary/my-games`
-Retorna a biblioteca de jogos do usuário autenticado.
-- **Autenticação**: Requerida
-- **Resposta**: `200 OK` - Lista de jogos do usuário
-
-#### `GET /api/PlayerLibrary/health`
-Verifica o status do serviço de biblioteca.
-- **Resposta**: `200 OK`
-
-### Health Check
-
-#### `GET /health`
-Endpoint de health check geral da aplicação.
-- **Resposta**: `200 OK`
-
-## ⚙️ Serviços em Background
-
-### PaymentProcessConsumer
-
-Serviço em background responsável por consumir eventos de pagamento processado publicados pela **PaymentAPI** no RabbitMQ e adicionar automaticamente o jogo comprado à biblioteca do jogador no banco de dados.
-
-- **Exchange**: `payments.events`
-- **Queue**: `payments.process`
-- **Routing Key**: `payment.*`
-- **Ação**: Cria um registro em `PlayerLibraryGames` associando o `UserId` ao `GameId` do jogo comprado
+## Arquitetura
 
 ```
-PaymentAPI ──► RabbitMQ (payments.events) ──► PaymentProcessConsumer ──► PlayerLibraryGames (DB)
+catalogapi/
+├── CatalogApi/        # Camada de apresentação (Controllers, Middlewares, Services)
+├── Core/              # Camada de domínio (Entities, DTOs, interfaces)
+└── Infrastructure/    # Infraestrutura (EF Core, repositórios, Elasticsearch)
 ```
 
-## 📦 Pré-requisitos
+## Endpoints principais
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Docker](https://www.docker.com/get-started) e [Docker Compose](https://docs.docker.com/compose/install/)
-- [SQL Server 2022](https://www.microsoft.com/sql-server/sql-server-downloads) (ou usar via Docker)
-- [RabbitMQ](https://www.rabbitmq.com/) (ou usar via Docker)
+### Games
+- `GET /api/Games`
+- `GET /api/Games/{id}`
+- `POST /api/Games`
+- `PUT /api/Games`
+- `DELETE /api/Games/{id}`
+- `POST /order-game`
+- `GET /api/Games/search?q={termo}&category={categoria?}`
+- `POST /api/Games/reindex`
+- `GET /api/Games/health`
 
-## 🚀 Instalação e Execução
+### PlayerLibrary
+- `GET /api/PlayerLibrary/my-games`
+- `GET /api/PlayerLibrary/health`
 
-### Opção 1: Docker Compose (Recomendado)
+### Health global
+- `GET /health`
 
-1. Clone o repositório:
+## Autenticação
+
+O projeto possui serviço e middleware para validação de JWT via UserAPI (`TokenValidationService` e `JwtValidationMiddleware`), porém o middleware customizado está desabilitado por padrão em `Program.cs`.
+
+## Mensageria
+
+### Publicação de pedido
+- Exchange: `order.events`
+- Routing key: `order.ordered`
+- Endpoint: `POST /order-game`
+
+### Consumo de pagamento
+- Exchange: `payments.events`
+- Queue: `payments.process`
+- Routing key: `payment.*`
+- Consumer: `PaymentProcessConsumer`
+
+## Pré-requisitos
+
+- .NET SDK 8.0
+- Docker e Docker Compose
+- PostgreSQL
+- Redis
+- Elasticsearch
+- RabbitMQ
+- DynamoDB (ou DynamoDB Local, para desenvolvimento)
+
+## Execução local
+
+### 1) Configurar variáveis
+
 ```bash
-git clone https://github.com/capuchetagames/catalogapi.git
-cd catalogapi
+cp .env.example .env
 ```
 
-2. Execute com Docker Compose:
+Preencha os valores do `.env`.
+
+### 2) Subir infra local (PostgreSQL, Redis, Elasticsearch)
+
 ```bash
-docker-compose up -d
+docker compose -f docker-compose.local.yaml up -d
 ```
 
-3. A API estará disponível em: `http://localhost:5245`
+### 3) Subir serviços auxiliares (RabbitMQ e DynamoDB Local)
 
-4. Acesse o Swagger: `http://localhost:5245/swagger`
-
-### Opção 2: Execução Local
-
-1. Clone o repositório:
 ```bash
-git clone https://github.com/capuchetagames/catalogapi.git
-cd catalogapi
+docker run -d --name rabbitmq \
+  -p 5672:5672 -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=admin \
+  -e RABBITMQ_DEFAULT_PASS=admin \
+  rabbitmq:3-management
+
+
+docker run -d --name dynamodb-local \
+  -p 8000:8000 \
+  amazon/dynamodb-local
 ```
 
-2. Configure o banco de dados SQL Server (local ou via Docker):
+### 4) Rodar API com Docker
+
 ```bash
-docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=rooot1234!!" -p 1436:1433 --name catalog_db -d mcr.microsoft.com/mssql/server:2022-latest
+docker compose -f docker-compose.api.yaml up -d --build
 ```
 
-> ⚠️ **SEGURANÇA**: A senha acima é apenas para desenvolvimento local. Em produção, use senhas fortes e únicas!
+API: `http://localhost:5245`  
+Swagger (Development): `http://localhost:5245/swagger`
 
-3. Configure o RabbitMQ (local ou via Docker):
+## Execução com dotnet
+
 ```bash
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin rabbitmq:3-management
-```
-
-> ⚠️ **SEGURANÇA**: As credenciais acima são apenas para desenvolvimento local. Em produção, use credenciais fortes e únicas!
-
-4. Restaure as dependências:
-```bash
-dotnet restore
-```
-
-5. Execute as migrações do banco:
-```bash
-dotnet ef database update --project Infrastructure --startup-project CatalogApi
-```
-
-6. Execute a aplicação:
-```bash
+dotnet restore CatalogApi.sln
+dotnet build CatalogApi.sln -c Release
 cd CatalogApi
 dotnet run
 ```
 
-7. A API estará disponível em: `http://localhost:5245`
+## Variáveis de ambiente
 
-## 🔐 Variáveis de Ambiente
+Arquivo base: `.env.example`
 
-### Arquivo `.env`
-```env
-ASPNETCORE_ENVIRONMENT=Development
-ASPNETCORE_HTTP_PORTS=5245
-Jwt__Key=your-secret-jwt-key-here
-```
+Principais variáveis:
 
-> ⚠️ **IMPORTANTE**: Gere sua própria chave JWT segura. Nunca use chaves de exemplo em produção!
+- `ASPNETCORE_ENVIRONMENT`
+- `ASPNETCORE_HTTP_PORTS`
+- `DB_CONNECTION_STRING`
+- `PG_USER`
+- `PG_PASSWORD`
+- `Jwt__Key`
+- `REDIS_CONNECTION`
+- `DynamoDb__LogTableName`
+- `DynamoDb__UseLocal`
+- `DynamoDb__LocalUrl`
+- `DynamoDb__Region`
+- `DynamoDb__ProfileName`
+- `ElasticSettings__LocalUrl`
+- `ElasticSettings__UseCloud`
+- `ElasticSettings__ApiKey`
+- `ElasticSettings__CloudId`
 
-### Configuração no `appsettings.json`
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1436;Database=Db.Catalog;User Id=sa;Password=rooot1234!!;TrustServerCertificate=True;"
-  },
-  "RabbitMq": {
-    "Host": "localhost",
-    "User": "admin",
-    "Password": "admin"
-  },
-  "Services": {
-    "UsersApi": {
-      "BaseUrl": "http://users-api:8080/"
-    }
-  }
-}
-```
+## CI/CD
 
-> ⚠️ **NOTA DE SEGURANÇA**: As credenciais acima são valores de exemplo para desenvolvimento local. Em ambientes de produção:
-> - Use senhas fortes e únicas para o banco de dados
-> - Gere credenciais seguras para o RabbitMQ
-> - Utilize secrets management (Azure Key Vault, AWS Secrets Manager, Kubernetes Secrets, etc.)
-> - Nunca commite credenciais reais no controle de versão
+Pipeline em `.github/workflows/ci-cd.yml` com etapas de:
 
-### Variáveis Importantes
+1. Build e teste (`dotnet restore`, `dotnet build`, `dotnet test`)
+2. Build/push de imagem Docker
+3. Security scan (Trivy)
+4. Deploy em EKS (rolling update)
 
-| Variável | Descrição | Valor Padrão |
-|----------|-----------|--------------|
-| `ASPNETCORE_ENVIRONMENT` | Ambiente de execução | `Development` |
-| `ASPNETCORE_HTTP_PORTS` | Porta HTTP | `5245` |
-| `ConnectionStrings__DefaultConnection` | String de conexão do SQL Server | Ver appsettings.json |
-| `RabbitMq__Host` | Host do RabbitMQ | `localhost` |
-| `RabbitMq__User` | Usuário do RabbitMQ | `admin` |
-| `RabbitMq__Password` | Senha do RabbitMQ | `admin` |
-| `Jwt__Key` | Chave secreta JWT | Gere uma chave segura única |
-| `Services__UsersApi__BaseUrl` | URL base da UserAPI | `http://users-api:8080/` |
-
-## 🐳 Deployment
-
-### Docker
-
-> 📝 **Nota**: O `Dockerfile` utiliza build multi-stage e instala automaticamente o agente **New Relic .NET** para APM e rastreamento distribuído.
-
-#### Build da Imagem
-```bash
-docker build -t catalogapi:latest .
-```
-
-#### Executar Container
-```bash
-docker run -d -p 5245:8080 --name catalog-api \
-  -e ConnectionStrings__DefaultConnection="Server=host.docker.internal,1436;Database=Db.Catalog;User Id=sa;Password=rooot1234!!;TrustServerCertificate=True;" \
-  -e Jwt__Key="your-secret-jwt-key-here" \
-  catalogapi:latest
-```
-
-> ⚠️ **SEGURANÇA**: 
-> - Substitua `your-secret-jwt-key-here` por uma chave JWT segura
-> - A senha do banco (`rooot1234!!`) é apenas para desenvolvimento local
-> - Em produção, use credenciais fortes e gerenciadas por secrets management
-
-### Kubernetes
-
-O projeto inclui manifestos Kubernetes na pasta `/k8s`:
-
-#### Deploy Completo (Produção)
-```bash
-cd k8s
-./k8s-start-all-deploy.sh
-```
-
-#### Deploy para Desenvolvimento
-```bash
-cd k8s
-./k8s-start-all-dev.sh
-```
-
-#### Deploy Individual
-
-1. **Banco de Dados**:
-```bash
-./k8s-deploy-db.sh
-```
-
-2. **API (produção)**:
-```bash
-./k8s-deploy-api.sh
-```
-
-3. **API (desenvolvimento — pod)**:
-```bash
-./k8s-dev-api.sh
-```
-
-#### Recursos Kubernetes Disponíveis
-
-- `catalog-deployment.yaml` - Deployment da API
-- `catalog-pod.yaml` - Pod da API (desenvolvimento)
-- `catalog-service.yaml` - Service da API
-- `catalog-configmap.yaml` - ConfigMap com configurações
-- `catalog-secret.yaml` - Secrets (JWT, senhas)
-- `sql-deployment.yaml` - Deployment do SQL Server
-- `sql-service.yaml` - Service do SQL Server
-
-#### Limpar Recursos
-```bash
-./k8s-delete-all.sh
-```
-
-## 📁 Estrutura do Projeto
+## Estrutura de arquivos relevante
 
 ```
 catalogapi/
-├── CatalogApi/                    # Camada de Apresentação
-│   ├── Controllers/               # Controllers da API
-│   │   ├── GamesController.cs
-│   │   └── PlayerLibraryController.cs
-│   ├── Middlewares/               # Middlewares customizados
-│   │   ├── JwtValidationMiddleware.cs
-│   │   └── LogMiddleware.cs
-│   ├── Service/                   # Serviços da aplicação
-│   │   ├── MemCacheService.cs
-│   │   ├── MigrationExtensions.cs
-│   │   ├── PaymentProcessConsumer.cs
-│   │   ├── RabbitMqService.cs
-│   │   └── TokenValidationService.cs
-│   ├── Config/                    # Configurações
-│   │   └── RabbitMqSettings.cs
-│   ├── Program.cs                 # Entry point
-│   └── appsettings.json           # Configurações da aplicação
-├── Core/                          # Camada de Domínio
-│   ├── Entity/                    # Entidades de domínio
-│   │   ├── EntityBase.cs
-│   │   ├── Game.cs
-│   │   └── PlayerLibraryGames.cs
-│   ├── Dtos/                      # Data Transfer Objects
-│   │   ├── GameDto.cs
-│   │   ├── GameInput.cs
-│   │   ├── UpdateGameInput.cs
-│   │   ├── OrderInput.cs
-│   │   ├── OrderPlacedEvent.cs
-│   │   ├── PaymentProcessedEvent.cs
-│   │   ├── TokenValidationRequestDto.cs
-│   │   └── TokenValidationResponseDto.cs
-│   ├── Models/                    # Interfaces de serviços
-│   │   ├── IBaseLogger.cs
-│   │   ├── ICacheService.cs
-│   │   ├── ICorrelationIdService.cs
-│   │   ├── IRabbitMqService.cs
-│   │   └── ITokenValidationService.cs
-│   ├── Repository/                # Interfaces de repositórios
-│   │   ├── IRepository.cs
-│   │   ├── IGameRepository.cs
-│   │   └── IPlayerLibraryGames.cs
-│   └── PermissionType.cs          # Enum de permissões
-├── Infrastructure/                # Camada de Infraestrutura
-│   ├── Repository/                # Implementações de repositórios
-│   │   ├── ApplicationDbContext.cs
-│   │   ├── EfRepository.cs
-│   │   ├── GameRepository.cs
-│   │   ├── PlayerLibraryGamesRepository.cs
-│   │   ├── InfrastructureInjection.cs
-│   │   └── Configuration/
-│   │       ├── GameConfiguration.cs
-│   │       └── PlayerLibraryGamesConfiguration.cs
-│   ├── Migrations/                # Migrações do EF Core
-│   └── Infrastructure.csproj
-├── k8s/                           # Manifestos Kubernetes
-│   ├── catalog-deployment.yaml    # Deployment da API
-│   ├── catalog-pod.yaml           # Pod da API (desenvolvimento)
-│   ├── catalog-service.yaml
-│   ├── catalog-configmap.yaml
-│   ├── catalog-secret.yaml
-│   ├── sql-deployment.yaml
-│   ├── sql-service.yaml
-│   ├── k8s-start-all-deploy.sh    # Deploy completo (produção)
-│   ├── k8s-start-all-dev.sh       # Deploy completo (desenvolvimento)
-│   ├── k8s-deploy-db.sh
-│   ├── k8s-deploy-api.sh
-│   ├── k8s-dev-api.sh             # Deploy pod de desenvolvimento
-│   ├── k8s-delete-all.sh
-│   └── env.sh
-├── docker-compose.yaml            # Orquestração Docker
-├── Dockerfile                     # Imagem Docker (com New Relic)
-├── .dockerignore
-├── .gitignore
-└── README.md
+├── CatalogApi/
+│   ├── Controllers/
+│   ├── Middlewares/
+│   ├── Service/
+│   ├── Program.cs
+│   └── appsettings*.json
+├── Core/
+├── Infrastructure/
+├── docker-compose.api.yaml
+├── docker-compose.local.yaml
+├── Dockerfile
+└── k8s/
 ```
 
-## 🤝 Microsserviços Relacionados
+## Microsserviços relacionados
 
-Este projeto faz parte de uma arquitetura de microsserviços:
-
-- **UserAPI** - Gerenciamento de usuários e autenticação
-- **PaymentAPI** - Processamento de pagamentos
-- **CatalogAPI** (este projeto) - Catálogo de jogos
-
+- UserAPI (autenticação)
+- PaymentAPI (pagamentos)
+- CatalogAPI (este repositório)
