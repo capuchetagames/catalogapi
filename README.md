@@ -39,7 +39,7 @@ A Catalog API faz parte de uma arquitetura de microsserviços da plataforma de j
 
 ### Infra e integrações
 - PostgreSQL 16
-- Redis
+- Redis (cache distribuído)
 - Elasticsearch 8
 - RabbitMQ
 - DynamoDB (logs)
