@@ -191,6 +191,44 @@ Pipeline em `.github/workflows/ci-cd.yml` com etapas de:
 3. Security scan (Trivy)
 4. Deploy em EKS (rolling update)
 
+### Limpeza de segredos em commits antigos (histórico Git)
+
+Se algum segredo já foi commitado no passado, apenas editar o arquivo atual não é suficiente. Use este fluxo:
+
+1. **Inventário**
+   - Identifique todos os valores e padrões vazados no histórico.
+2. **Rotação imediata**
+   - Rotacione/revogue todos os segredos expostos (DB, JWT, AWS, Elastic etc.).
+3. **Reescrita de histórico**
+   - Use `git-filter-repo` para remover/substituir os valores em todos os commits, branches e tags.
+4. **Validação**
+   - Garanta que nenhum segredo apareça mais no histórico reescrito.
+5. **Publicação**
+   - Faça push forçado de branches/tags reescritas para o remoto.
+6. **Sincronização do time**
+   - Oriente o time a re-clonar ou resetar os clones locais para o novo histórico.
+7. **Retenção externa**
+   - Revise PRs, forks, logs e artefatos de CI que possam ter retido os segredos.
+8. **Prevenção contínua**
+   - Secret scanning ativo, push protection e revisão obrigatória de segredos em PRs.
+
+Comandos de referência:
+
+```bash
+pip install git-filter-repo
+git filter-repo --replace-text replacements.txt --force
+git push origin --force --all
+git push origin --force --tags
+```
+
+Exemplo de `replacements.txt`:
+
+```txt
+literal:valor_real_do_segredo==>PLACEHOLDER_SEGURO
+regex:Jwt__Key:\s*"[^"]+"==>Jwt__Key: "JWT_KEY_PLACEHOLDER"
+regex:POSTGRES_PASSWORD:\s*"[^"]+"==>POSTGRES_PASSWORD: "POSTGRES_PASSWORD_PLACEHOLDER"
+```
+
 ## Estrutura de arquivos relevante
 
 ```
