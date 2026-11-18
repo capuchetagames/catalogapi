@@ -9,6 +9,7 @@
       - "5245:8080" 
     environment:
       RABBITMQ_HOST: rabbitmq
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
       Jwt__Key: ${Jwt__Key}

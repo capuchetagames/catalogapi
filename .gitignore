@@ -58,3 +58,7 @@ nunit-*.xml
 
 .env.local
 .env.aws
+# Secrets / env files
+.env
+.env.*
+!.env.example
